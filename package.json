@@ -1,0 +1,16 @@
+{
+  "name": "mqtt-laravel",
+  "version": "1.0.0",
+  "description": "",
+  "main": "subscriber.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "mqtt": "^2.18.3",
+    "mysql": "^2.16.0"
+  }
+}
