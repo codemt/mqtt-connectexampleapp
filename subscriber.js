@@ -28,7 +28,6 @@ function mqtt_connect() {
 
 function mqtt_subscribe(err, granted) {
     console.log("Subscribed to " + Topic);
-    setInterval(() => mqtt_messsageReceived(),3000);
     if (err) {console.log(err);}
 };
 
@@ -47,43 +46,38 @@ function after_publish() {
 	//do nothing
 };
 
-
 //receive a message from MQTT broker
 function mqtt_messsageReceived(topic, message, packet) {
     
+    console.log(message);
+    var msgreceived = message.toString();
+    console.log(msgreceived);
+    var myMessages = msgreceived;        
+         myMessages = 
+        //remove unwanted hidden characters inside message
+         //preserve newlines, etc - use valid JSON
+            myMessages = myMessages.replace(/\\n/g, "\\n")  
+            .replace(/\\'/g, "\\'")
+            .replace(/\\"/g, '\\"')
+            .replace(/\\&/g, "\\&")
+            .replace(/\\r/g, "\\r")
+            .replace(/\\t/g, "\\t")
+            .replace(/\\b/g, "\\b")
+            .replace(/\\f/g, "\\f");
+         //remove non-printable and other non-valid JSON chars
+        myMessages = myMessages.replace(/[\u0000-\u0019]+/g,""); 
+        var obj = JSON.parse(myMessages);
+        console.log("Messages are " +myMessages);
+        console.log("Object is " +obj);
+        console.log("Temp is " +obj.Temp);
+        console.log("Door is " +obj.Door);
+        console.log("Fan1 is " +obj.Fan1);
+        console.log("Fan2 is "+ obj.Fan2);
+        console.log("Time is " + obj.Time);
+        console.log("Mac is " + obj.mac);
+
+        insert_message(obj);
     
-    if(message !== null && message !== undefined )
-    {
-        var msgrecived = JSON.parse(message.toString());
-        console.log(msgrecived);
-        
-        // var myMessages = 
-        // //remove unwanted hidden characters inside message
-        // //preserve newlines, etc - use valid JSON
-        //     myMessages = myMessages.replace(/\\n/g, "\\n")  
-        //     .replace(/\\'/g, "\\'")
-        //     .replace(/\\"/g, '\\"')
-        //     .replace(/\\&/g, "\\&")
-        //     .replace(/\\r/g, "\\r")
-        //     .replace(/\\t/g, "\\t")
-        //     .replace(/\\b/g, "\\b")
-        //     .replace(/\\f/g, "\\f");
-        // // remove non-printable and other non-valid JSON chars
-        // myMessages = myMessages.replace(/[\u0000-\u0019]+/g,""); 
-        // var obj = JSON.parse(myMessages);
-        // console.log("Messages are " +myMessages);
-        // console.log("Object is " +obj);
-        // console.log("Temp is " +obj.Temp);
-        // console.log("Door is " +obj.Door);
-        // console.log("Fan1 is " +obj.Fan1);
-        // console.log("Fan2 is "+ obj.Fan2);
-        // console.log("Time is " + obj.Time);
-        // console.log("Mac is " + obj.mac);
-
-        // insert_message(obj);
-        
-
-    }
     
 };
 var mysql = require('mysql'); //https://www.npmjs.com/package/mysql
@@ -103,39 +97,22 @@ function insert_message(obj) {
 
     var devicemessages = obj; //split a string into an array
     console.log("Device Messages are"+devicemessages);
-    var today = new Date();
-    var dd = today.getDate(); // get date
-    var mm = today.getMonth(); // get month
-    var yyyy = today.getFullYear(); // get year 
-
-    // get hours minutes and seconds .
-    var hours = today.getHours();
-    var min = today.getMinutes();
-    var seconds = today.getSeconds();
-
-    if(dd<10) {
-        dd = '0'+dd
-    } 
-    if(mm<10) {
-        mm = '0'+mm
-    } 
-
-    today = yyyy + '-' + mm + '-' + dd + ' ' + hours+':'+min+':'+seconds;
-    console.log(today);
-
+   
     var rt = devicemessages.Temp;
     var door = devicemessages.Door;
     var f1 = devicemessages.Fan1;
     var f2 = devicemessages.Fan2;
-
+    var created_at  = devicemessages.Time;
+    var DeviceID = devicemessages.mac;
+    var is_latest=1; 
+    
     var payload = {};
     payload["rt"]=rt;
     payload["do"]=door;
     payload["f1"]=f1;
     payload["f2"]=f2;
-    var DeviceID = devicemessages.mac; 
-    var created_at = today;
-    var is_latest=1;
+    
+    
     //console.log("Created at "+created_at);
     console.log("device id "+DeviceID);
     //console.log( JSON.stringify(payload) );
@@ -154,14 +131,18 @@ function insert_message(obj) {
   });   
 
   // update _is_latest log
-  var sql = "UPDATE device_logs SET is_latest=0 where created_at < ?";
-  var logs = [
-    [created_at]
-];
-  con.query(sql,[logs], function (err, result) {
-    if (err) throw err;
-    console.log(result.affectedRows + " record(s) updated");
-  });
+  /*
+
+        var sql = "UPDATE device_logs SET is_latest=0 where created_at < ?";
+        var logs = [
+            [created_at]
+        ];
+        con.query(sql,[logs], function (err, result) {
+            if (err) throw err;
+            console.log(result.affectedRows + " record(s) updated");
+        });
+
+  */
   
   
 	//var sql = "INSERT INTO testdevices (deviceid,Temp,Door,Fan1,Fan2) VALUES (?,?,?)";
