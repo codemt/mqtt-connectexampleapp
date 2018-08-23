@@ -1,13 +1,15 @@
 var mqtt = require('mqtt'); //https://www.npmjs.com/package/mqtt
-var Topic = 'test/data'; //subscribe to all topics
-var Broker_URL = 'test.mosquitto.org';
-//var Database_URL = '192.168.1.123';
+ //subscribe to all topics
+ var Broker_URL = 'mqtt.tamsys.tessol.in';
+ var Topic = 'agrisys/chill/#';
+var Database_URL = '127.0.0.1';
+// Datbase_URL = 192.168.1.123
 
 var options = {
 	//clientId: 'MyMQTT',
 	port: 8883,
-	//username: 'agrisys', // mqtt user name 
-	//password: 'VHVlIEF1ZyAxNCAxMzozNzo0OSBVVEMgMjAxOAo=',	
+	username: 'agrisys', // mqtt user name 
+	password: 'VHVlIEF1ZyAxNCAxMzozNzo0OSBVVEMgMjAxOAo=',	
     keepalive : 60,
     rejectUnauthorized:false
 };
@@ -26,8 +28,7 @@ function mqtt_connect() {
 
 function mqtt_subscribe(err, granted) {
     console.log("Subscribed to " + Topic);
-    var helloworld = "helloworld";
-    mqtt_messsageReceived(Topic ,helloworld);
+    setInterval(() => mqtt_messsageReceived(),3000);
     if (err) {console.log(err);}
 };
 
@@ -46,32 +47,124 @@ function after_publish() {
 	//do nothing
 };
 
+
 //receive a message from MQTT broker
 function mqtt_messsageReceived(topic, message, packet) {
+    
+    
+    if(message !== null && message !== undefined )
+    {
+        var msgrecived = JSON.parse(message.toString());
+        console.log(msgrecived);
+        
+        // var myMessages = 
+        // //remove unwanted hidden characters inside message
+        // //preserve newlines, etc - use valid JSON
+        //     myMessages = myMessages.replace(/\\n/g, "\\n")  
+        //     .replace(/\\'/g, "\\'")
+        //     .replace(/\\"/g, '\\"')
+        //     .replace(/\\&/g, "\\&")
+        //     .replace(/\\r/g, "\\r")
+        //     .replace(/\\t/g, "\\t")
+        //     .replace(/\\b/g, "\\b")
+        //     .replace(/\\f/g, "\\f");
+        // // remove non-printable and other non-valid JSON chars
+        // myMessages = myMessages.replace(/[\u0000-\u0019]+/g,""); 
+        // var obj = JSON.parse(myMessages);
+        // console.log("Messages are " +myMessages);
+        // console.log("Object is " +obj);
+        // console.log("Temp is " +obj.Temp);
+        // console.log("Door is " +obj.Door);
+        // console.log("Fan1 is " +obj.Fan1);
+        // console.log("Fan2 is "+ obj.Fan2);
+        // console.log("Time is " + obj.Time);
+        // console.log("Mac is " + obj.mac);
 
-    console.log("Messages are "+message);
-	//var message_str = message.toString(); //convert byte array to string
-	//message_str = message_str.replace(/\n$/, ''); //remove new line
-	//payload syntax: clientID,topic,message
-	// if (countInstances(message_str) != 1) {
-	// 	console.log("Invalid payload");
-	// 	} else {	
-	// 	insert_message(topic, message_str, packet);
-	// 	console.log(message_arr);
-	// }
+        // insert_message(obj);
+        
+
+    }
+    
 };
-function insert_message(topic, message_str, packet) {
-	var message_arr = extract_string(message_str); //split a string into an array
-	var Temp = message_arr[0];
-    var Door = message_arr[1];
-    var Fan1  = message_arr[2];
-    var Fan2 = message_arr[3];
-    var Time = message_arr[4];
-    var Mac = message_arr[5];
+var mysql = require('mysql'); //https://www.npmjs.com/package/mysql
+//Create Connection
+var connection = mysql.createConnection({
+	host: Database_URL,
+	user: "root",
+	password: "secretpassword",
+	database: "mqttdevices"
+});
 
-    console.log(Temp,Door,Fan1,Fan2,Time,Mac);
+connection.connect(function(err) {
+	if (err) throw err;
+	console.log("Database Connected!");
+});
+function insert_message(obj) {
 
-	// var sql = "INSERT INTO ?? (??,??,??) VALUES (?,?,?)";
+    var devicemessages = obj; //split a string into an array
+    console.log("Device Messages are"+devicemessages);
+    var today = new Date();
+    var dd = today.getDate(); // get date
+    var mm = today.getMonth(); // get month
+    var yyyy = today.getFullYear(); // get year 
+
+    // get hours minutes and seconds .
+    var hours = today.getHours();
+    var min = today.getMinutes();
+    var seconds = today.getSeconds();
+
+    if(dd<10) {
+        dd = '0'+dd
+    } 
+    if(mm<10) {
+        mm = '0'+mm
+    } 
+
+    today = yyyy + '-' + mm + '-' + dd + ' ' + hours+':'+min+':'+seconds;
+    console.log(today);
+
+    var rt = devicemessages.Temp;
+    var door = devicemessages.Door;
+    var f1 = devicemessages.Fan1;
+    var f2 = devicemessages.Fan2;
+
+    var payload = {};
+    payload["rt"]=rt;
+    payload["do"]=door;
+    payload["f1"]=f1;
+    payload["f2"]=f2;
+    var DeviceID = devicemessages.mac; 
+    var created_at = today;
+    var is_latest=1;
+    //console.log("Created at "+created_at);
+    console.log("device id "+DeviceID);
+    //console.log( JSON.stringify(payload) );
+    var jsondata = JSON.stringify(payload);
+    console.log("payload is " +jsondata);
+   
+
+   // insert into the db.
+    var sql = "INSERT INTO device_logs (device_id, created_at,payload,is_latest) VALUES ?";
+    var values = [
+        [DeviceID,created_at,jsondata,is_latest]
+    ];
+	connection.query(sql, [values], function (err, result) {
+    if (err) throw err;
+    console.log("Number of records inserted: " + result.affectedRows);
+  });   
+
+  // update _is_latest log
+  var sql = "UPDATE device_logs SET is_latest=0 where created_at < ?";
+  var logs = [
+    [created_at]
+];
+  con.query(sql,[logs], function (err, result) {
+    if (err) throw err;
+    console.log(result.affectedRows + " record(s) updated");
+  });
+  
+  
+	//var sql = "INSERT INTO testdevices (deviceid,Temp,Door,Fan1,Fan2) VALUES (?,?,?)";
 	// var params = ['tbl_messages', 'clientID', 'topic', 'message', clientID, topic, message];
 	// sql = mysql.format(sql, params);	
 	
