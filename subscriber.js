@@ -1,15 +1,15 @@
 var mqtt = require('mqtt'); //https://www.npmjs.com/package/mqtt
  //subscribe to all topics
- var Broker_URL = 'mqtt.tamsys.tessol.in';
- var Topic = 'agrisys/chill/#';
-var Database_URL = '127.0.0.1';
+ var Broker_URL = 'BROKER_URL';
+ var Topic = 'TOPIC';
+var Database_URL = 'DATABASE_URL';
 // Datbase_URL = 192.168.1.123
 
 var options = {
 	//clientId: 'MyMQTT',
 	port: 8883,
-	username: 'agrisys', // mqtt user name 
-	password: 'VHVlIEF1ZyAxNCAxMzozNzo0OSBVVEMgMjAxOAo=',	
+	username: 'USERNAME', // mqtt user name 
+	password: 'PASSWORD',	
     keepalive : 60,
     rejectUnauthorized:false
 };
@@ -105,7 +105,7 @@ function insert_message(obj) {
     var created_at  = devicemessages.Time;
     var DeviceID = devicemessages.mac;
     var is_latest=1; 
-    
+
     var payload = {};
     payload["rt"]=rt;
     payload["do"]=door;
