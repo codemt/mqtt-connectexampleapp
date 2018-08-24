@@ -1,15 +1,18 @@
 var mqtt = require('mqtt'); //https://www.npmjs.com/package/mqtt
+require('dotenv').config();
+var axios = require('axios');
+
  //subscribe to all topics
- var Broker_URL = 'BROKER_URL';
- var Topic = 'TOPIC';
-var Database_URL = 'DATABASE_URL';
+ var Broker_URL = process.env.BROKER_URL;
+ var Topic = process.env.TOPIC;
+var Database_URL = process.env.DATABASE_URL;
 // Datbase_URL = 192.168.1.123
 
 var options = {
 	//clientId: 'MyMQTT',
 	port: 8883,
-	username: 'USERNAME', // mqtt user name 
-	password: 'PASSWORD',	
+	username: process.env.USERNAME, // mqtt user name 
+	password: process.env.PASSWORD,	
     keepalive : 60,
     rejectUnauthorized:false
 };
@@ -47,13 +50,13 @@ function after_publish() {
 };
 
 //receive a message from MQTT broker
-function mqtt_messsageReceived(topic, message, packet) {
+function mqtt_messsageReceived(topic, message) {
     
-    console.log(message);
+    // convert Byte Array to String.
     var msgreceived = message.toString();
-    console.log(msgreceived);
+
+ //   console.log(msgreceived.Temp);
     var myMessages = msgreceived;        
-         myMessages = 
         //remove unwanted hidden characters inside message
          //preserve newlines, etc - use valid JSON
             myMessages = myMessages.replace(/\\n/g, "\\n")  
@@ -86,7 +89,7 @@ var connection = mysql.createConnection({
 	host: Database_URL,
 	user: "root",
 	password: "secretpassword",
-	database: "mqttdevices"
+	database: "tamsys"
 });
 
 connection.connect(function(err) {
@@ -95,7 +98,8 @@ connection.connect(function(err) {
 });
 function insert_message(obj) {
 
-    var devicemessages = obj; //split a string into an array
+    // assign obj to  device messages 
+    var devicemessages = obj; 
     console.log("Device Messages are"+devicemessages);
    
     var rt = devicemessages.Temp;
@@ -104,8 +108,9 @@ function insert_message(obj) {
     var f2 = devicemessages.Fan2;
     var created_at  = devicemessages.Time;
     var DeviceID = devicemessages.mac;
+    var DeviceID = "AGS"+devicemessages.mac;
     var is_latest=1; 
-
+    var name = "Agrisys Device#1"
     var payload = {};
     payload["rt"]=rt;
     payload["do"]=door;
@@ -118,10 +123,54 @@ function insert_message(obj) {
     //console.log( JSON.stringify(payload) );
     var jsondata = JSON.stringify(payload);
     console.log("payload is " +jsondata);
-   
+    console.log("created at is " +created_at);
 
-   // insert into the db.
-    var sql = "INSERT INTO device_logs (device_id, created_at,payload,is_latest) VALUES ?";
+    // hit API and get all the devices.
+    // get all device ids and check if the device id exists.
+    /*
+    connection.query("SELECT id FROM devices", function (err, result, fields) {
+        if (err) throw err;
+        var deviceids = result.toString();
+        var devicesfetched = JSON.stringify(deviceids);
+        console.log(devicesfetched);
+      });
+      */
+       /* 
+      // check if the deviceID exists in the table.
+      var found = false;
+        for( var i = 0; i < deviceids.length; i++ )
+         {
+            if ( deviceids[i] === DeviceID ) {
+                found = true;
+                break;
+            }
+        }
+        if ( found ) {
+            console.log("device id found");
+            //the country code is not in the array
+  
+        } else {
+            console.log("Device id not found");
+            //the country code exists in the array
+        }
+        */
+   
+    /*
+    // insert the device table if device id is unique.
+    var sql = "INSERT INTO devices (id,name,created_at) VALUES ?";
+    var values = [
+        [DeviceID,name,created_at,]
+    ];
+	connection.query(sql, [values], function (err, result) {
+    if (err) throw err;
+    console.log("Number of records inserted: " + result.affectedRows);
+  });   
+  */
+
+
+    
+   // insert the device logs in  the device_log table..
+    var sql = "INSERT INTO device_logs (device_id,created_at,payload,is_latest)  VALUES ?";
     var values = [
         [DeviceID,created_at,jsondata,is_latest]
     ];
@@ -130,19 +179,21 @@ function insert_message(obj) {
     console.log("Number of records inserted: " + result.affectedRows);
   });   
 
+  
+
   // update _is_latest log
-  /*
+  
 
         var sql = "UPDATE device_logs SET is_latest=0 where created_at < ?";
         var logs = [
             [created_at]
         ];
-        con.query(sql,[logs], function (err, result) {
+        connection.query(sql,[logs], function (err, result) {
             if (err) throw err;
             console.log(result.affectedRows + " record(s) updated");
         });
 
-  */
+  
   
   
 	//var sql = "INSERT INTO testdevices (deviceid,Temp,Door,Fan1,Fan2) VALUES (?,?,?)";

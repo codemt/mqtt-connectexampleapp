@@ -20,12 +20,13 @@ Messages are {“Temp”:25.50,”Door”:0,”Fan1”:0,”Fan2”:0,”Time”
 var msg = {
 	Temp:25.50,
 	Door:0,
-	Fan1:0,
+	Fan1:1,
 	Fan2:0,
-	Time:"22-8-2018 15:07",
-	mac:"5ccf7f5a4ba4"
+	Time:"22-8-2018 15:07:11",
+	mac:"5ccf7f5a056e"
 }
 
 var datetime=new Date(); 
+console.log(JSON.stringify(msg));
 client.publish('agrisys/chill/5ccf7f5a056e',JSON.stringify(msg));
 //client.disconnect();
